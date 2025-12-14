@@ -1,0 +1,277 @@
+// Cortex Analytics - Lead Generation Schema
+// Maps to existing MySQL database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ============================================
+// DIMENSION TABLES
+// ============================================
+
+model dim_dates {
+  date_key         Int       @id
+  full_date        DateTime  @unique @db.Date
+  day_of_week      Int       @db.TinyInt
+  day_of_week_name String    @db.VarChar(20)
+  day_of_month     Int       @db.TinyInt
+  day_of_year      Int       @db.SmallInt
+  week_of_year     Int       @db.TinyInt
+  month_number     Int       @db.TinyInt
+  month_name       String    @db.VarChar(20)
+  quarter          Int       @db.TinyInt
+  year             Int       @db.SmallInt
+  is_weekend       Boolean   @default(false)
+  is_holiday       Boolean   @default(false)
+
+  leads    fct_leads[]
+  ad_spend fct_ad_spend[]
+
+  @@index([full_date])
+  @@index([year, month_number])
+}
+
+model dim_campaigns {
+  campaign_id          BigInt    @id @default(autoincrement())
+  platform             String    @db.VarChar(50)
+  platform_account_id  String?   @db.VarChar(100)
+  platform_campaign_id String    @db.VarChar(100)
+  platform_adset_id    String?   @db.VarChar(100)
+  platform_ad_id       String?   @db.VarChar(100)
+  campaign_name        String?   @db.VarChar(500)
+  adset_name           String?   @db.VarChar(500)
+  ad_name              String?   @db.VarChar(500)
+  campaign_objective   String?   @db.VarChar(100)
+  campaign_type        String?   @db.VarChar(100)
+  funnel_stage         String?   @db.VarChar(50)
+  utm_source           String?   @db.VarChar(100)
+  utm_medium           String?   @db.VarChar(100)
+  utm_campaign         String?   @db.VarChar(255)
+  utm_content          String?   @db.VarChar(255)
+  utm_term             String?   @db.VarChar(255)
+  is_active            Boolean?  @default(true)
+  first_seen_date      DateTime? @db.Date
+  last_seen_date       DateTime? @db.Date
+  created_at           DateTime? @default(now())
+  updated_at           DateTime? @updatedAt
+
+  leads            fct_leads[]
+  ad_spend         fct_ad_spend[]
+  lead_attribution fct_lead_attribution[]
+
+  @@unique([platform, platform_campaign_id, platform_adset_id, platform_ad_id], map: "idx_platform_ids")
+  @@index([platform, platform_campaign_id], map: "idx_platform_campaign")
+}
+
+model dim_landing_pages {
+  landing_page_id Int       @id @default(autoincrement())
+  page_url        String    @db.VarChar(500)
+  page_name       String?   @db.VarChar(200)
+  page_type       String?   @db.VarChar(50)
+  offer_name      String?   @db.VarChar(200)
+  is_active       Boolean?  @default(true)
+  created_at      DateTime? @default(now())
+
+  leads fct_leads[]
+
+  @@unique([page_url(length: 255)], map: "idx_url")
+}
+
+model dim_lead_sources {
+  source_id   Int      @id @default(autoincrement())
+  source_name String   @db.VarChar(100)
+  source_type String?  @db.VarChar(50)
+  is_paid     Boolean? @default(false)
+
+  leads fct_leads[]
+
+  @@unique([source_name], map: "idx_source_name")
+}
+
+// ============================================
+// FACT TABLES
+// ============================================
+
+model fct_leads {
+  lead_id          BigInt    @id @default(autoincrement())
+  external_lead_id String?   @db.VarChar(100)
+  date_key         Int
+  email_hash       String?   @db.VarChar(64)
+  phone_hash       String?   @db.VarChar(64)
+  name_first       String?   @db.VarChar(100)
+  company_name     String?   @db.VarChar(200)
+  job_title        String?   @db.VarChar(200)
+  company_size     String?   @db.VarChar(50)
+  industry         String?   @db.VarChar(100)
+  custom_field_1   String?   @db.VarChar(500)
+  custom_field_2   String?   @db.VarChar(500)
+  custom_field_3   String?   @db.VarChar(500)
+  landing_page_id  Int?
+  source_id        Int?
+  campaign_id      BigInt?
+  utm_source       String?   @db.VarChar(100)
+  utm_medium       String?   @db.VarChar(100)
+  utm_campaign     String?   @db.VarChar(255)
+  utm_content      String?   @db.VarChar(255)
+  utm_term         String?   @db.VarChar(255)
+  fbc              String?   @db.VarChar(255)
+  fbp              String?   @db.VarChar(255)
+  gclid            String?   @db.VarChar(255)
+  ttclid           String?   @db.VarChar(255)
+  ga_client_id     String?   @db.VarChar(100)
+  lead_status      String?   @default("new") @db.VarChar(50)
+  lead_score       Int?
+  created_at       DateTime
+  contacted_at     DateTime?
+  qualified_at     DateTime?
+  converted_at     DateTime?
+  deal_value       Decimal?  @db.Decimal(14, 2)
+  ip_address       String?   @db.VarChar(45)
+  user_agent       String?   @db.Text
+  device_type      String?   @db.VarChar(50)
+  updated_at       DateTime? @updatedAt
+
+  date               dim_dates?             @relation(fields: [date_key], references: [date_key])
+  landing_page       dim_landing_pages?     @relation(fields: [landing_page_id], references: [landing_page_id])
+  source             dim_lead_sources?      @relation(fields: [source_id], references: [source_id])
+  campaign           dim_campaigns?         @relation(fields: [campaign_id], references: [campaign_id])
+  attribution        fct_lead_attribution[]
+  offline_conversions fct_offline_conversions[]
+
+  @@index([date_key], map: "idx_date")
+  @@index([email_hash], map: "idx_email")
+  @@index([source_id], map: "idx_source")
+  @@index([campaign_id], map: "idx_campaign")
+  @@index([landing_page_id], map: "idx_landing_page")
+  @@index([lead_status], map: "idx_status")
+  @@index([created_at], map: "idx_created")
+  @@index([gclid], map: "idx_gclid")
+  @@index([fbc], map: "idx_fbc")
+}
+
+model fct_ad_spend {
+  spend_id       BigInt    @id @default(autoincrement())
+  date_key       Int
+  campaign_id    BigInt
+  impressions    BigInt?   @default(0)
+  reach          BigInt?   @default(0)
+  clicks         BigInt?   @default(0)
+  link_clicks    BigInt?   @default(0)
+  spend          Decimal   @default(0) @db.Decimal(12, 2)
+  leads_platform Int?      @default(0)
+  cpm            Decimal?  @db.Decimal(12, 4)
+  cpc            Decimal?  @db.Decimal(12, 4)
+  ctr            Decimal?  @db.Decimal(8, 4)
+  cpl_platform   Decimal?  @db.Decimal(12, 4)
+  extracted_at   DateTime? @default(now())
+
+  date     dim_dates     @relation(fields: [date_key], references: [date_key])
+  campaign dim_campaigns @relation(fields: [campaign_id], references: [campaign_id])
+
+  @@unique([date_key, campaign_id], map: "idx_date_campaign")
+  @@index([date_key])
+  @@index([campaign_id])
+}
+
+model fct_lead_attribution {
+  attribution_id     BigInt    @id @default(autoincrement())
+  lead_id            BigInt
+  campaign_id        BigInt
+  attribution_model  String    @db.VarChar(50)
+  attribution_weight Decimal?  @default(1.0) @db.Decimal(5, 4)
+  attributed_value   Decimal?  @db.Decimal(14, 2)
+  created_at         DateTime? @default(now())
+
+  lead     fct_leads     @relation(fields: [lead_id], references: [lead_id])
+  campaign dim_campaigns @relation(fields: [campaign_id], references: [campaign_id])
+
+  @@unique([lead_id, campaign_id, attribution_model], map: "idx_lead_campaign_model")
+  @@index([lead_id])
+  @@index([campaign_id])
+}
+
+model fct_offline_conversions {
+  conversion_id        BigInt    @id @default(autoincrement())
+  lead_id              BigInt
+  event_name           String    @db.VarChar(100)
+  event_time           DateTime
+  event_value          Decimal?  @db.Decimal(14, 2)
+  currency             String?   @default("BRL") @db.VarChar(3)
+  email_hash           String?   @db.VarChar(64)
+  phone_hash           String?   @db.VarChar(64)
+  fbc                  String?   @db.VarChar(255)
+  fbp                  String?   @db.VarChar(255)
+  gclid                String?   @db.VarChar(255)
+  meta_sent            Boolean?  @default(false)
+  meta_sent_at         DateTime?
+  meta_event_id        String?   @db.VarChar(100)
+  google_sent          Boolean?  @default(false)
+  google_sent_at       DateTime?
+  google_conversion_id String?   @db.VarChar(100)
+  created_at           DateTime? @default(now())
+
+  lead fct_leads @relation(fields: [lead_id], references: [lead_id])
+
+  @@index([lead_id])
+  @@index([event_time])
+  @@index([meta_sent])
+  @@index([google_sent])
+}
+
+// ============================================
+// RAW TABLES
+// ============================================
+
+model raw_form_submissions {
+  id                BigInt    @id @default(autoincrement())
+  source            String    @db.VarChar(50)
+  raw_data          Json
+  extracted_at      DateTime? @default(now())
+  processed_at      DateTime?
+  processed_lead_id BigInt?
+
+  @@index([extracted_at])
+  @@index([processed_at])
+}
+
+model raw_meta_ads {
+  id            BigInt    @id @default(autoincrement())
+  date_start    DateTime  @db.Date
+  account_id    String    @db.VarChar(50)
+  campaign_id   String    @db.VarChar(50)
+  campaign_name String?   @db.VarChar(500)
+  adset_id      String?   @db.VarChar(50)
+  adset_name    String?   @db.VarChar(500)
+  ad_id         String?   @db.VarChar(50)
+  ad_name       String?   @db.VarChar(500)
+  impressions   BigInt?   @default(0)
+  clicks        BigInt?   @default(0)
+  spend         Decimal?  @default(0) @db.Decimal(12, 4)
+  actions       Json?
+  extracted_at  DateTime? @default(now())
+
+  @@index([date_start])
+  @@index([campaign_id])
+}
+
+model raw_google_ads {
+  id            BigInt    @id @default(autoincrement())
+  date          DateTime  @db.Date
+  customer_id   String    @db.VarChar(50)
+  campaign_id   String    @db.VarChar(50)
+  campaign_name String?   @db.VarChar(500)
+  ad_group_id   String?   @db.VarChar(50)
+  ad_group_name String?   @db.VarChar(500)
+  impressions   BigInt?   @default(0)
+  clicks        BigInt?   @default(0)
+  cost_micros   BigInt?   @default(0)
+  conversions   Decimal?  @default(0) @db.Decimal(12, 4)
+  extracted_at  DateTime? @default(now())
+
+  @@index([date])
+  @@index([campaign_id])
+}
