@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
         gclid: gclid || null,
         lead_status: 'new',
         lead_score: leadScore,
+        created_at: now,
       },
     })
 
