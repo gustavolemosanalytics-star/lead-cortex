@@ -273,7 +273,7 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-medium">Leads de alta probabilidade</p>
                     <p className="text-sm text-[var(--foreground-muted)]">
-                      Alertar quando leads com score > 80 entrarem
+                      Alertar quando leads com score maior que 80 entrarem
                     </p>
                   </div>
                   <Badge variant="success">Ativo</Badge>
