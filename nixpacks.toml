@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "npm-10_x", "openssl"]
+nixPkgs = ["openssl"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = [
+  "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -",
+  "apt-get install -y nodejs",
+  "npm ci"
+]
 
 [phases.build]
 cmds = ["npm run build"]
