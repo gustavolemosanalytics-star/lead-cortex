@@ -131,10 +131,11 @@ export async function POST(request: NextRequest) {
     // Store raw submission
     await prisma.raw_form_submissions.create({
       data: {
-        lead_id: lead.lead_id,
-        submission_source: 'landing_page',
-        raw_payload: body,
-        processed_status: 'success',
+        source: 'landing_page',
+        raw_data: body,
+        extracted_at: now,
+        processed_at: now,
+        processed_lead_id: lead.lead_id,
       },
     })
 
