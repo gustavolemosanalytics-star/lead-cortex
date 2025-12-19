@@ -73,7 +73,7 @@ export async function getCampaignPerformance(days: number = 30) {
       platform: campaign.platform,
       campaign_name: campaign.campaign_name || 'Unknown Campaign',
       funnel_stage: campaign.funnel_stage || 'tof',
-      is_active: campaign.is_active,
+      is_active: campaign.is_active ?? true,
       leads,
       qualified,
       converted,
