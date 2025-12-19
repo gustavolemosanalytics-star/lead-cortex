@@ -101,7 +101,7 @@ export async function getLeadById(leadId: number) {
       source: true,
       campaign: true,
       landing_page: true,
-      attributions: {
+      attribution: {
         include: {
           campaign: true,
         },
